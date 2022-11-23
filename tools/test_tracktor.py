@@ -1,3 +1,4 @@
+import csv
 import sys
 import time
 from os import path as osp
@@ -64,8 +65,40 @@ def get_reid_model_istance(reid_model):
     return reid_network
 
 
+def write_results(all_tracks, seq_name, output_dir):
+    """Write the tracks in the format for MOT16/MOT17 sumbission
+
+     all_tracks: dictionary with 1 dictionary for every track with {..., i:np.array([x1,y1,x2,y2]), ...} at key track_num
+
+     Each file contains these lines:
+     <frame>, <id>, <bb_left>, <bb_top>, <bb_width>, <bb_height>, <conf>, <x>, <y>, <z>
+     """
+
+    # format_str = "{}, -1, {}, {}, {}, {}, {}, -1, -1, -1"
+
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    with open(osp.join(output_dir, f"{seq_name}.txt"), "w") as of:
+        writer = csv.writer(of, delimiter=',')
+        for i, track in all_tracks.items():
+            for frame, bb in track.items():
+                x1 = bb[0]
+                y1 = bb[1]
+                x2 = bb[2]
+                y2 = bb[3]
+                writer.writerow(
+                    [frame + 1,
+                     i + 1,
+                     x1 + 1,
+                     y1 + 1,
+                     x2 - x1 + 1,
+                     y2 - y1 + 1,
+                     -1, -1, -1, -1])
+
+
 def main(module_name, name, seed, obj_detect_models, reid_models,
-         tracker, dataset, test_motsynth, load_results, frame_range, interpolate,
+         tracker, dataset, test_motsynth, frame_range, interpolate,
          write_images):
     # set all seeds
     torch.manual_seed(seed)
@@ -117,15 +150,16 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
 
         seq_loader = DataLoader(torch.utils.data.Subset(seq, range(start_frame, end_frame)))
         num_frames += len(seq_loader)
+        seq_name = None
 
         results = {}
-        if load_results:
-            results = seq.load_results(output_dir)
         if not results:
             start = time.time()
 
             for frame_data in tqdm(seq_loader):
                 with torch.no_grad():
+                    if not seq_name:
+                        seq_name = frame_data['seq_name']
                     frame_data['img'] = ToTensor()(Image.open(frame_data['im_path'][0]).convert("RGB")).unsqueeze(0)
                     tracker.step(frame_data)
 
@@ -140,7 +174,7 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
                 results = interpolate_tracks(results)
 
             print(f"Writing predictions to: {output_dir}")
-            seq.write_results(results, output_dir)
+            write_results(results, seq_name, output_dir)
 
         if seq.no_gt:
             print("No GT data for evaluation available.")
@@ -169,5 +203,5 @@ if __name__ == "__main__":
         args = yaml.safe_load(file)
 
     main(args['module_name'], args['name'], args['seed'], args['obj_detect_models'], args['reid_models'],
-         args['tracker'], args['dataset'], args['test_motsynth'],
-         args['load_results'], args['frame_range'], args['interpolate'], args['write_images'])
+         args['tracker'], args['dataset'], args['test_motsynth'], args['frame_range'], args['interpolate'],
+         args['write_images'])

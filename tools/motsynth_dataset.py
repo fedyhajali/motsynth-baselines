@@ -36,7 +36,8 @@ class MOTSynthDataset(Dataset):
             frame = {'gt': gt,
                      'im_path': im_path,
                      'vis': vis,
-                     'dets': dets}
+                     'dets': dets,
+                     'seq_name': seq_name}
             data.append(frame)
         return data
 

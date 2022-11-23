@@ -1,6 +1,6 @@
 name: Tracktor++
 # Subfolder name in output/tracker/
-module_name: MOT17
+module_name: MOTSynth
 desription:
 seed: 12345
 # frcnn or fpn
@@ -17,13 +17,11 @@ reid_models: resnet50_fc512_reid_epoch_19.pth # ReID model checkpoint used by Tr
 interpolate: False
 # [False, 'debug', 'pretty']
 # compile video with: `ffmpeg -f image2 -framerate 15 -i %06d.jpg -vcodec libx264 -y movie.mp4 -vf scale=320:-1`
-write_images: False
+write_images: True
 # load tracking results if available and only evaluate
 load_results: False
 # dataset (look into tracker/datasets/factory.py)
-dataset: mot17_train_FRCNN
-# use motsynth for testing
-test_motsynth: True
+dataset: MOTSynth
 # start and end percentage of frames to run, e.g., [0.0, 0.5] for train and [0.75, 1.0] for val split.
 frame_range:
   start: 0.0

@@ -1,4 +1,5 @@
 import csv
+import os
 import sys
 import time
 from os import path as osp
@@ -22,14 +23,9 @@ from motsynth_dataset import MOTSynthDataset
 
 sys.path.append(osp.dirname(osp.dirname(__file__)))
 sys.path.append(osp.join(osp.dirname(osp.dirname(__file__)), 'src'))
-from configs.path_cfg import MOTCHA_ROOT, OUTPUT_DIR
 
-from tracktor.config import cfg as _cfg
+from configs.path_cfg import OUTPUT_DIR
 
-import os
-
-if not osp.exists(_cfg.DATA_DIR):
-    os.symlink(MOTCHA_ROOT, _cfg.DATA_DIR)
 
 mm.lap.default_solver = 'lap'
 
@@ -65,6 +61,31 @@ def get_reid_model_istance(reid_model):
     return reid_network
 
 
+def load_results(seq_name, output_dir):
+    file_path = osp.join(output_dir, seq_name)
+    results = {}
+
+    if not os.path.isfile(file_path):
+        return results
+
+    with open(file_path, "r") as of:
+        csv_reader = csv.reader(of, delimiter=',')
+        for row in csv_reader:
+            frame_id, track_id = int(row[0]) - 1, int(row[1]) - 1
+
+            if not track_id in results:
+                results[track_id] = {}
+
+            x1 = float(row[2]) - 1
+            y1 = float(row[3]) - 1
+            x2 = float(row[4]) - 1 + x1
+            y2 = float(row[5]) - 1 + y1
+
+            results[track_id][frame_id] = [x1, y1, x2, y2]
+
+    return results
+
+
 def write_results(all_tracks, seq_name, output_dir):
     """Write the tracks in the format for MOT16/MOT17 sumbission
 
@@ -98,8 +119,8 @@ def write_results(all_tracks, seq_name, output_dir):
 
 
 def main(module_name, name, seed, obj_detect_models, reid_models,
-         tracker, dataset, test_motsynth, frame_range, interpolate,
-         write_images):
+         tracker, dataset, frame_range, interpolate,
+         write_images, load_results):
     # set all seeds
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -112,7 +133,7 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
     if not osp.exists(output_dir):
         os.makedirs(output_dir)
 
-    if test_motsynth:
+    if dataset == 'MOTSynth':
         dataset = MOTSynthDataset()
     else:
         dataset = Datasets(dataset)
@@ -140,7 +161,6 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
 
     for seq in dataset:
         # Messy way to evaluate on MOTS without having to modify code from the tracktor repo
-        eval_seqs.append(str(seq))
         tracker.reset()
 
         print(f"Tracking: {seq}")
@@ -150,16 +170,17 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
 
         seq_loader = DataLoader(torch.utils.data.Subset(seq, range(start_frame, end_frame)))
         num_frames += len(seq_loader)
-        seq_name = None
+        seq_name = str(seq[0]['seq_name'])
+        eval_seqs.append(seq_name)
 
         results = {}
+        if load_results:
+            results = load_results(seq_name, output_dir)
         if not results:
             start = time.time()
 
             for frame_data in tqdm(seq_loader):
                 with torch.no_grad():
-                    if not seq_name:
-                        seq_name = frame_data['seq_name']
                     frame_data['img'] = ToTensor()(Image.open(frame_data['im_path'][0]).convert("RGB")).unsqueeze(0)
                     tracker.step(frame_data)
 
@@ -174,18 +195,16 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
                 results = interpolate_tracks(results)
 
             print(f"Writing predictions to: {output_dir}")
+
             write_results(results, seq_name, output_dir)
 
-        if seq.no_gt:
-            print("No GT data for evaluation available.")
-        else:
-            mot_accums.append(get_mot_accum(results, seq_loader))
+        mot_accums.append(get_mot_accum(results, seq_loader))
 
         if write_images:
             plot_sequence(
                 results,
-                seq,
-                osp.join(output_dir, str(dataset), str(seq)),
+                seq_loader,
+                osp.join(output_dir, str(dataset), str(seq_name)),
                 write_images)
 
     if time_total:
@@ -194,7 +213,7 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
     if mot_accums:
         print("Evaluation:")
         evaluate_mot_accums(mot_accums,
-                            [str(s) for s in dataset if not s.no_gt and str(s) in eval_seqs],
+                            [str(s['seq_name']) for s in dataset if not s['no_gt'] and str(s['seq_name']) in eval_seqs],
                             generate_overall=True)
 
 
@@ -203,5 +222,5 @@ if __name__ == "__main__":
         args = yaml.safe_load(file)
 
     main(args['module_name'], args['name'], args['seed'], args['obj_detect_models'], args['reid_models'],
-         args['tracker'], args['dataset'], args['test_motsynth'], args['frame_range'], args['interpolate'],
-         args['write_images'])
+         args['tracker'], args['dataset'], args['frame_range'], args['interpolate'],
+         args['write_images'], args['load_results'])

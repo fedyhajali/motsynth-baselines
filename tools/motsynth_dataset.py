@@ -20,24 +20,26 @@ class MOTSynthDataset(Dataset):
 
     def __getitem__(self, idx):
         data = []
-        seq_name = self.seq_names[idx]
-        self.sequence = self.annotations[f'{seq_name}']
-        self.detections_file = f'/nas/softechict-nas-3/gmancusi/datasets/MOTSynth/yolox/sequences/yolox_bytetrack_motsynth_{seq_name}.json'
+        self.seq_name = self.seq_names[idx]
+        self.sequence = self.annotations[f'{self.seq_name}']
+        self.detections_file = f'/nas/softechict-nas-3/gmancusi/datasets/MOTSynth/yolox/sequences/yolox_bytetrack_motsynth_{self.seq_name}.json'
         yolox_dets = self._load_annotations(self.detections_file, self.mode)
         for key, value in self.sequence.items():
             frame_name = key
             gt = {}
             vis = {}
-            im_path = os.path.join(self.motsynth_path, f'frames/{seq_name}/rgb/{frame_name}.jpg')
+            im_path = os.path.join(self.motsynth_path, f'frames/{self.seq_name}/rgb/{frame_name}.jpg')
             dets = torch.tensor(np.array(yolox_dets[frame_name]).reshape(-1, 5)[:, :4])
             for i, detections in enumerate(value):
                 gt[detections[5]] = np.array(detections[:4])
                 vis[detections[5]] = float(detections[6])
             frame = {'gt': gt,
                      'im_path': im_path,
+                     'img_path': im_path,
                      'vis': vis,
                      'dets': dets,
-                     'seq_name': seq_name}
+                     'seq_name': self.seq_name,
+                     'no_gt': False}
             data.append(frame)
         return data
 

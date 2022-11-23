@@ -22,6 +22,8 @@ write_images: False
 load_results: False
 # dataset (look into tracker/datasets/factory.py)
 dataset: mot17_train_FRCNN
+# use motsynth for testing
+test_motsynth: True
 # start and end percentage of frames to run, e.g., [0.0, 0.5] for train and [0.75, 1.0] for val split.
 frame_range:
   start: 0.0

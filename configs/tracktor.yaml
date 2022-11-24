@@ -17,9 +17,9 @@ reid_models: resnet50_fc512_reid_epoch_19.pth # ReID model checkpoint used by Tr
 interpolate: False
 # [False, 'debug', 'pretty']
 # compile video with: `ffmpeg -f image2 -framerate 15 -i %06d.jpg -vcodec libx264 -y movie.mp4 -vf scale=320:-1`
-write_images: True
+write_images: False
 # load tracking results if available and only evaluate
-load_results: False
+load_results: True
 # dataset (look into tracker/datasets/factory.py)
 dataset: MOTSynth
 # start and end percentage of frames to run, e.g., [0.0, 0.5] for train and [0.75, 1.0] for val split.
@@ -49,7 +49,7 @@ tracker:
   # 0 tells the tracker to use private detections (Faster R-CNN)
   public_detections: False
   # Do camera motion compensation
-  do_align: True
+  do_align: False
   # Which warp mode to use (MOTION_EUCLIDEAN, MOTION_AFFINE, ...)
   warp_mode: MOTION_EUCLIDEAN
   # maximal number of iterations (original 50)

@@ -1,4 +1,3 @@
-import csv
 import os
 import sys
 import time
@@ -10,112 +9,21 @@ import torch
 import yaml
 from PIL import Image
 from torch.utils.data import DataLoader
-from torchreid.utils import FeatureExtractor
 from torchvision.transforms import ToTensor
 from tqdm import tqdm
 from tracktor.datasets.factory import Datasets
-from tracktor.frcnn_fpn import FRCNN_FPN
 from tracktor.tracker import Tracker
-from tracktor.utils import (evaluate_mot_accums, get_mot_accum,
-                            interpolate_tracks, plot_sequence)
+from tracktor.utils import (evaluate_mot_accums, get_mot_accum, interpolate_tracks)
 
 from motsynth_dataset import MOTSynthDataset
+from utils import (plot_sequence, get_obj_detect_model_istance, get_reid_model_istance, _load_results, write_results)
 
 sys.path.append(osp.dirname(osp.dirname(__file__)))
 sys.path.append(osp.join(osp.dirname(osp.dirname(__file__)), 'src'))
 
 from configs.path_cfg import OUTPUT_DIR
 
-
 mm.lap.default_solver = 'lap'
-
-
-def get_obj_detect_model_istance(obj_detect_model):
-    if not osp.exists(obj_detect_model):
-        obj_detect_model = osp.join(OUTPUT_DIR, 'models', obj_detect_model)
-    assert os.path.isfile(obj_detect_model)
-    obj_detect_state_dict = torch.load(
-        osp.join(OUTPUT_DIR, 'models', obj_detect_model), map_location=lambda storage, loc: storage)
-    if 'model' in obj_detect_state_dict:
-        obj_detect_state_dict = obj_detect_state_dict['model']
-    obj_detect = FRCNN_FPN(num_classes=2)
-    obj_detect.load_state_dict(obj_detect_state_dict, strict=False)
-    obj_detect.eval()
-    if torch.cuda.is_available():
-        obj_detect.cuda()
-
-    return obj_detect
-
-
-def get_reid_model_istance(reid_model):
-    if not osp.exists(reid_model):
-        reid_model = osp.join(OUTPUT_DIR, 'models', reid_model)
-
-    assert os.path.isfile(reid_model)
-    reid_network = FeatureExtractor(
-        model_name='resnet50_fc512',
-        model_path=reid_model,
-        verbose=False,
-        device='cuda' if torch.cuda.is_available() else 'cpu')
-
-    return reid_network
-
-
-def load_results(seq_name, output_dir):
-    file_path = osp.join(output_dir, seq_name)
-    results = {}
-
-    if not os.path.isfile(file_path):
-        return results
-
-    with open(file_path, "r") as of:
-        csv_reader = csv.reader(of, delimiter=',')
-        for row in csv_reader:
-            frame_id, track_id = int(row[0]) - 1, int(row[1]) - 1
-
-            if not track_id in results:
-                results[track_id] = {}
-
-            x1 = float(row[2]) - 1
-            y1 = float(row[3]) - 1
-            x2 = float(row[4]) - 1 + x1
-            y2 = float(row[5]) - 1 + y1
-
-            results[track_id][frame_id] = [x1, y1, x2, y2]
-
-    return results
-
-
-def write_results(all_tracks, seq_name, output_dir):
-    """Write the tracks in the format for MOT16/MOT17 sumbission
-
-     all_tracks: dictionary with 1 dictionary for every track with {..., i:np.array([x1,y1,x2,y2]), ...} at key track_num
-
-     Each file contains these lines:
-     <frame>, <id>, <bb_left>, <bb_top>, <bb_width>, <bb_height>, <conf>, <x>, <y>, <z>
-     """
-
-    # format_str = "{}, -1, {}, {}, {}, {}, {}, -1, -1, -1"
-
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    with open(osp.join(output_dir, f"{seq_name}.txt"), "w") as of:
-        writer = csv.writer(of, delimiter=',')
-        for i, track in all_tracks.items():
-            for frame, bb in track.items():
-                x1 = bb[0]
-                y1 = bb[1]
-                x2 = bb[2]
-                y2 = bb[3]
-                writer.writerow(
-                    [frame + 1,
-                     i + 1,
-                     x1 + 1,
-                     y1 + 1,
-                     x2 - x1 + 1,
-                     y2 - y1 + 1,
-                     -1, -1, -1, -1])
 
 
 def main(module_name, name, seed, obj_detect_models, reid_models,
@@ -168,18 +76,19 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
         start_frame = int(frame_range['start'] * len(seq))
         end_frame = int(frame_range['end'] * len(seq))
 
-        seq_loader = DataLoader(torch.utils.data.Subset(seq, range(start_frame, end_frame)))
-        num_frames += len(seq_loader)
+        data_loader = DataLoader(torch.utils.data.Subset(seq, range(start_frame, end_frame)))
+        num_frames += len(data_loader)
         seq_name = str(seq[0]['seq_name'])
         eval_seqs.append(seq_name)
 
         results = {}
         if load_results:
-            results = load_results(seq_name, output_dir)
+            results = _load_results(seq_name, output_dir)
+            print(f'Loaded {seq_name} results.')
         if not results:
             start = time.time()
 
-            for frame_data in tqdm(seq_loader):
+            for frame_data in tqdm(data_loader):
                 with torch.no_grad():
                     frame_data['img'] = ToTensor()(Image.open(frame_data['im_path'][0]).convert("RGB")).unsqueeze(0)
                     tracker.step(frame_data)
@@ -198,12 +107,12 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
 
             write_results(results, seq_name, output_dir)
 
-        mot_accums.append(get_mot_accum(results, seq_loader))
+        mot_accums.append(get_mot_accum(results, data_loader))
 
         if write_images:
             plot_sequence(
                 results,
-                seq_loader,
+                data_loader,
                 osp.join(output_dir, str(dataset), str(seq_name)),
                 write_images)
 

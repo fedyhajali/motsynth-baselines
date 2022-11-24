@@ -68,7 +68,6 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
     eval_seqs = []
 
     for seq in dataset:
-        # Messy way to evaluate on MOTS without having to modify code from the tracktor repo
         tracker.reset()
 
         print(f"Tracking: {seq}")
@@ -84,12 +83,12 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
         results = {}
         if load_results:
             results = _load_results(seq_name, output_dir)
-            print(f'Loaded {seq_name} results.')
         if not results:
             start = time.time()
 
             for frame_data in tqdm(data_loader):
                 with torch.no_grad():
+                    # image generation here to lighten the dataloader, we couldn't load all images for entire sequence
                     frame_data['img'] = ToTensor()(Image.open(frame_data['im_path'][0]).convert("RGB")).unsqueeze(0)
                     tracker.step(frame_data)
 
@@ -130,6 +129,6 @@ if __name__ == "__main__":
     with open('configs/tracktor.yaml', 'r') as file:
         args = yaml.safe_load(file)
 
-    main(args['module_name'], args['name'], args['seed'], args['obj_detect_models'], args['reid_models'],
-         args['tracker'], args['dataset'], args['frame_range'], args['interpolate'],
-         args['write_images'], args['load_results'])
+    main(args['module_name'], args['name'], args['seed'], args['obj_detect_models'],
+         args['reid_models'], args['tracker'], args['dataset'], args['frame_range'],
+         args['interpolate'], args['write_images'], args['load_results'])

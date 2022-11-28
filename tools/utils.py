@@ -1,6 +1,5 @@
 import csv
 import os
-from os import path as osp
 
 import cv2
 import matplotlib
@@ -126,7 +125,7 @@ def plot_sequence(tracks, data_loader, output_dir, write_images):
         db (torch.utils.data.Dataset): The dataset with the images belonging to the tracks (e.g. MOT_Sequence object)
         output_dir (String): Directory where to save the resulting images
     """
-    if not osp.exists(output_dir):
+    if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     cmap = rand_cmap(len(tracks), type='bright', first_color_black=False, last_color_black=False)
@@ -178,16 +177,41 @@ def plot_sequence(tracks, data_loader, output_dir, write_images):
         plt.axis('off')
         # plt.tight_layout()
         plt.draw()
-        plt.savefig(osp.join(output_dir, osp.basename(img_path)), dpi=96)
+        plt.savefig(os.path.join(output_dir, os.path.basename(img_path)), dpi=96)
         plt.close()
 
 
+def wandb_setup(cfg):
+    import wandb
+    import os
+    from os.path import exists
+    from pathlib import Path
+    run_id = None
+    resume = exists(Path(cfg.OUTPUT_DIR) / 'run.id')  # resume only if the log file exists
+    exp_name = os.path.basename(os.path.normpath(cfg.OUTPUT_DIR))
+    if resume:
+        with open(Path(cfg.OUTPUT_DIR) / 'run.id', 'r') as f:
+            run_id = f.readline()
+
+    run = wandb.init(project='unbiased_teacher', entity='fedyhajali', resume=resume, id=run_id,
+                     name=exp_name, allow_val_change=True, dir=f'{cfg.OUTPUT_DIR}/tmp', sync_tensorboard=True)
+
+    # save run in the log folder
+    with open(Path(cfg.OUTPUT_DIR) / 'run.id', 'w') as f:
+        f.write(str(run.id))
+
+    wandb.alert(
+        title=f">>> EXP STARTED ({run.id})",
+        text=f">>> Experiment: *{exp_name}* (*{run.id}*)  "
+    )
+
+
 def get_obj_detect_model_istance(obj_detect_model):
-    if not osp.exists(obj_detect_model):
-        obj_detect_model = osp.join(OUTPUT_DIR, 'models', obj_detect_model)
+    if not os.path.exists(obj_detect_model):
+        obj_detect_model = os.path.join(OUTPUT_DIR, 'models', obj_detect_model)
     assert os.path.isfile(obj_detect_model)
     obj_detect_state_dict = torch.load(
-        osp.join(OUTPUT_DIR, 'models', obj_detect_model), map_location=lambda storage, loc: storage)
+        os.path.join(OUTPUT_DIR, 'models', obj_detect_model), map_location=lambda storage, loc: storage)
     if 'model' in obj_detect_state_dict:
         obj_detect_state_dict = obj_detect_state_dict['model']
     obj_detect = FRCNN_FPN(num_classes=2)
@@ -200,8 +224,8 @@ def get_obj_detect_model_istance(obj_detect_model):
 
 
 def get_reid_model_istance(reid_model):
-    if not osp.exists(reid_model):
-        reid_model = osp.join(OUTPUT_DIR, 'models', reid_model)
+    if not os.path.exists(reid_model):
+        reid_model = os.path.join(OUTPUT_DIR, 'models', reid_model)
 
     assert os.path.isfile(reid_model)
     reid_network = FeatureExtractor(
@@ -214,7 +238,7 @@ def get_reid_model_istance(reid_model):
 
 
 def _load_results(seq_name, output_dir):
-    file_path = osp.join(output_dir, seq_name + '.txt')
+    file_path = os.path.join(output_dir, seq_name + '.txt')
     results = {}
 
     if not os.path.isfile(file_path):
@@ -252,7 +276,7 @@ def write_results(all_tracks, seq_name, output_dir):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    with open(osp.join(output_dir, f"{seq_name}.txt"), "w") as of:
+    with open(os.path.join(output_dir, f"{seq_name}.txt"), "w") as of:
         writer = csv.writer(of, delimiter=',')
         for i, track in all_tracks.items():
             for frame, bb in track.items():

@@ -1,7 +1,6 @@
 import os
 import sys
 import time
-from os import path as osp
 
 import motmetrics as mm
 import numpy as np
@@ -18,8 +17,8 @@ from tracktor.utils import (evaluate_mot_accums, get_mot_accum, interpolate_trac
 from motsynth_dataset import MOTSynthDataset
 from utils import (plot_sequence, get_obj_detect_model_istance, get_reid_model_istance, _load_results, write_results)
 
-sys.path.append(osp.dirname(osp.dirname(__file__)))
-sys.path.append(osp.join(osp.dirname(osp.dirname(__file__)), 'src'))
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
 
 from configs.path_cfg import OUTPUT_DIR
 
@@ -36,9 +35,9 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
     np.random.seed(seed)
     torch.backends.cudnn.deterministic = True
 
-    output_dir = osp.join(OUTPUT_DIR, 'tracktor_logs', module_name, name)
+    output_dir = os.path.join(OUTPUT_DIR, 'tracktor_logs', module_name, name)
 
-    if not osp.exists(output_dir):
+    if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     if dataset == 'MOTSynth':
@@ -112,7 +111,7 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
             plot_sequence(
                 results,
                 data_loader,
-                osp.join(output_dir, str(dataset), str(seq_name)),
+                os.path.join(output_dir, str(dataset), str(seq_name)),
                 write_images)
 
     if time_total:
@@ -121,12 +120,12 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
     if mot_accums:
         print("Evaluation:")
         evaluate_mot_accums(mot_accums,
-                            [str(s['seq_name']) for s in dataset if not s['no_gt'] and str(s['seq_name']) in eval_seqs],
+                            [str(seq[0]['seq_name']) for seq in dataset],
                             generate_overall=True)
 
 
 if __name__ == "__main__":
-    with open('configs/tracktor.yaml', 'r') as file:
+    with open('../configs/tracktor.yaml', 'r') as file:
         args = yaml.safe_load(file)
 
     main(args['module_name'], args['name'], args['seed'], args['obj_detect_models'],

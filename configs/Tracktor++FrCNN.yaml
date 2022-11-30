@@ -1,4 +1,4 @@
-name: Tracktor++
+name: Tracktor++FrCNN
 # Subfolder name in output/tracker/
 module_name: MOTSynth
 desription:
@@ -14,6 +14,15 @@ mots:
 obj_detect_models: maskrcnn_resnet50_fpn_epoch_10.pth # Mask RCNN checkpoint used by Tracktor. It is expected to be an absolute path or rel path at ${OUTPUT_DIR}/models 
 reid_models: resnet50_fc512_reid_epoch_19.pth # ReID model checkpoint used by Tracktor. It is expected to be at ${OUTPUT_DIR}/models 
 
+# output directory
+output_dir: /nas/softechict-nas-3/matteo/PycharmProjects/motsynth-baselines/output
+# motsynth root directory
+motsynth_root: /nas/softechict-nas-3/matteo/Datasets/MOTSynth/
+# motchallenge root directory
+motcha_root: /nas/softechict-nas-3/matteo/Datasets/MOTChallenge/
+# detections root directory
+dets_root: /nas/softechict-nas-3/gmancusi/datasets/MOTSynth/yolox/sequences/
+
 interpolate: False
 # [False, 'debug', 'pretty']
 # compile video with: `ffmpeg -f image2 -framerate 15 -i %06d.jpg -vcodec libx264 -y movie.mp4 -vf scale=320:-1`
@@ -22,11 +31,11 @@ write_images: False
 load_results: True
 # dataset (look into tracker/datasets/factory.py)
 dataset: MOTSynth
+# [train, validation, test]
+mode: test
 # start and end percentage of frames to run, e.g., [0.0, 0.5] for train and [0.75, 1.0] for val split.
 frame_range:
   start: 0.0
-  #start: 0.5
-  #end: 0.1
   end: 1.0
 
 tracker:
@@ -40,13 +49,13 @@ tracker:
   regression_nms_thresh: 0.6
   # motion model settings
   motion_model:
-    enabled: False
+    enabled: True
     # average velocity over last n_steps steps
     n_steps: 5
     # if true, only model the movement of the bounding box center. If false, width and height are also modeled.
     center_only: False
   # DPM or DPM_RAW or 0, raw includes the unfiltered (no nms) versions of the provided detections,
-  # 0 tells the tracker to use private detections (Faster R-CNN)
+  # False tells the tracker to use private detections (Faster R-CNN)
   public_detections: False
   # Do camera motion compensation
   do_align: False

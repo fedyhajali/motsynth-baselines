@@ -1,0 +1,79 @@
+name: Tracktor+FrCNN
+# Subfolder name in output/tracker/
+module_name: MOTSynth
+desription:
+seed: 12345
+# frcnn or fpn
+network: fpn
+
+mots:
+  do_mots: False # determines whether segmentation masks are also generated during tracking
+  maskrcnn_model: maskrcnn_resnet50_fpn_epoch_10.pth # Mask RCNN checkpoint used to obtain masks. It is expected to be an absolute path or a rel path at ${OUTPUT_DIR}/models 
+  mots20_only: True # if mots.do_mots is set to True, determines whether masks are generated for all sequences or only those in MOTS20
+
+obj_detect_models: maskrcnn_resnet50_fpn_epoch_10.pth # Mask RCNN checkpoint used by Tracktor. It is expected to be an absolute path or rel path at ${OUTPUT_DIR}/models 
+reid_models: resnet50_fc512_reid_epoch_19.pth # ReID model checkpoint used by Tracktor. It is expected to be at ${OUTPUT_DIR}/models 
+
+# output directory
+output_dir: /nas/softechict-nas-3/matteo/PycharmProjects/motsynth-baselines/output
+# motsynth root directory
+motsynth_root: /nas/softechict-nas-3/matteo/Datasets/MOTSynth/
+# motchallenge root directory
+motcha_root: /nas/softechict-nas-3/matteo/Datasets/MOTChallenge/
+# detections root directory
+dets_root: /nas/softechict-nas-3/gmancusi/datasets/MOTSynth/yolox/sequences/
+
+interpolate: False
+# [False, 'debug', 'pretty']
+# compile video with: `ffmpeg -f image2 -framerate 15 -i %06d.jpg -vcodec libx264 -y movie.mp4 -vf scale=320:-1`
+write_images: False
+# load tracking results if available and only evaluate
+load_results: True
+# dataset (look into tracker/datasets/factory.py)
+dataset: MOTSynth
+# [train, validation, test]
+mode: test
+# start and end percentage of frames to run, e.g., [0.0, 0.5] for train and [0.75, 1.0] for val split.
+frame_range:
+  start: 0.0
+  end: 1.0
+
+tracker:
+  # FRCNN score threshold for detections
+  detection_person_thresh: 0.95 # Only modification over the original config. A high threshold is needed to avoid FPs
+  # FRCNN score threshold for keeping the track alive
+  regression_person_thresh: 0.5
+  # NMS threshold for detection
+  detection_nms_thresh: 0.3
+  # NMS theshold while tracking
+  regression_nms_thresh: 0.6
+  # motion model settings
+  motion_model:
+    enabled: False
+    # average velocity over last n_steps steps
+    n_steps: 5
+    # if true, only model the movement of the bounding box center. If false, width and height are also modeled.
+    center_only: False
+  # DPM or DPM_RAW or 0, raw includes the unfiltered (no nms) versions of the provided detections,
+  # False tells the tracker to use private detections (Faster R-CNN)
+  public_detections: False
+  # Do camera motion compensation
+  do_align: False
+  # Which warp mode to use (MOTION_EUCLIDEAN, MOTION_AFFINE, ...)
+  warp_mode: MOTION_EUCLIDEAN
+  # maximal number of iterations (original 50)
+  number_of_iterations: 100
+  # Threshold increment between two iterations (original 0.001)
+  termination_eps: 0.00001
+  # Use siamese network to do reid
+  do_reid: True
+  # How much timesteps dead tracks are kept and cosidered for reid
+  inactive_patience: 50
+  # How many last appearance features are to keep
+  max_features_num: 10
+  # How similar do image and old track need to be to be considered the same person
+  reid_sim_threshold: 200.0
+  # How much IoU do track and image need to be considered for matching
+  reid_iou_threshold: 0.0
+
+oracle: null

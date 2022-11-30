@@ -27,7 +27,7 @@ mm.lap.default_solver = 'lap'
 
 def main(module_name, name, seed, obj_detect_models, reid_models,
          tracker, dataset, frame_range, interpolate,
-         write_images, load_results):
+         write_images, load_results, motsynth_root, dets_root, mode):
     # set all seeds
     torch.manual_seed(seed)
     if torch.cuda.is_available():
@@ -41,7 +41,7 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
         os.makedirs(output_dir)
 
     if dataset == 'MOTSynth':
-        dataset = MOTSynthDataset()
+        dataset = MOTSynthDataset(motsynth_root, dets_root, mode)
     else:
         dataset = Datasets(dataset)
 
@@ -125,9 +125,16 @@ def main(module_name, name, seed, obj_detect_models, reid_models,
 
 
 if __name__ == "__main__":
-    with open('../configs/tracktor.yaml', 'r') as file:
+    import argparse
+
+    parser = argparse.ArgumentParser(description='Pass a .yaml conf filename')
+    parser.add_argument('--conf', required=True,
+                        help='the configuration filename')
+    args = parser.parse_args()
+    with open(f'../configs/{args.conf}.yaml', 'r') as file:
         args = yaml.safe_load(file)
 
     main(args['module_name'], args['name'], args['seed'], args['obj_detect_models'],
          args['reid_models'], args['tracker'], args['dataset'], args['frame_range'],
-         args['interpolate'], args['write_images'], args['load_results'])
+         args['interpolate'], args['write_images'], args['load_results'],
+         args['motsynth_root'], args['dets_root'], args['mode'])

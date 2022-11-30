@@ -1,5 +1,6 @@
 import csv
 import os
+import sys
 
 import cv2
 import matplotlib
@@ -10,6 +11,8 @@ import tqdm
 from torchreid.utils import FeatureExtractor
 from tracktor.frcnn_fpn import FRCNN_FPN
 
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
 from configs.path_cfg import OUTPUT_DIR
 
 matplotlib.use('Agg')

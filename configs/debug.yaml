@@ -1,4 +1,4 @@
-name: Tracktor++YoloX
+name: Tracktor++YoloX-debug
 # Subfolder name in output/tracker/
 module_name: MOTSynth
 desription:
@@ -39,8 +39,8 @@ frame_range:
   end: 1.0
 
 tracker:
-  # FRCNN score threshold for detections -- The only modification over the original config. A high threshold is needed to avoid FPs
-  detection_person_thresh: 0.95
+  # FRCNN score threshold for detections
+  detection_person_thresh: 0.95 # Only modification over the original config. A high threshold is needed to avoid FPs
   # FRCNN score threshold for keeping the track alive
   regression_person_thresh: 0.5
   # NMS threshold for detection
@@ -49,13 +49,13 @@ tracker:
   regression_nms_thresh: 0.6
   # motion model settings
   motion_model:
-    enabled: True
+    enabled: False
     # average velocity over last n_steps steps
     n_steps: 5
     # if true, only model the movement of the bounding box center. If false, width and height are also modeled.
     center_only: False
   # DPM or DPM_RAW or 0, raw includes the unfiltered (no nms) versions of the provided detections,
-  # 0 tells the tracker to use private detections (Faster R-CNN)
+  # False tells the tracker to use private detections (Faster R-CNN)
   public_detections: True
   # Do camera motion compensation
   do_align: False
@@ -71,7 +71,7 @@ tracker:
   inactive_patience: 50
   # How many last appearance features are to keep
   max_features_num: 10
-  # How similar do image and old track need to be considered the same person
+  # How similar do image and old track need to be to be considered the same person
   reid_sim_threshold: 200.0
   # How much IoU do track and image need to be considered for matching
   reid_iou_threshold: 0.0

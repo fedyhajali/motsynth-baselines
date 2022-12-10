@@ -1,9 +1,10 @@
+import os
 import torch
 from torch.utils.data import DataLoader
 from tracktor.utils import (evaluate_mot_accums, get_mot_accum)
 
 from motsynth_dataset import MOTSynthDataset
-from utils import _load_results
+from utils import _load_results, plot_sequence
 
 
 def main(seq_name, results_dir, motsynth_path, dets_path, mode):
@@ -20,6 +21,12 @@ def main(seq_name, results_dir, motsynth_path, dets_path, mode):
     evaluate_mot_accums(mot_accums,
                         [seq_name],
                         generate_overall=True)
+
+    plot_sequence(
+        results,
+        data_loader,
+        os.path.join(results_dir),
+        'debug')
 
 
 if __name__ == "__main__":
